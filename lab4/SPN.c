@@ -104,9 +104,13 @@ void main() {
 
     printf("\n");
     uint16_t ct = encrypt(pt, key);
-    printf("The ciphertext is: %hx\n", ct);
+    printf("---------------------------\n");
+    printf("| The ciphertext is: %hx |\n", ct);
+    printf("---------------------------\n");
 
     printf("\n");
     uint16_t decrypted = decrypt(ct, key);
-    printf("The plaintext is: %hx\n", decrypted);
+    printf("--------------------------\n");
+    printf("| The plaintext is: %hx |\n", decrypted);
+    printf("--------------------------\n");
 }
