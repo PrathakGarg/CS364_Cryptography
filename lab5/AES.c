@@ -66,21 +66,22 @@ void invShiftRows(unsigned char x[4][4]) {
     }
 }
 
-unsigned char** matrixMultiply(unsigned char x[4][4], unsigned char y[4][4]) {
+void mixColumns(unsigned char x[4][4]) {
     unsigned char temp[4][4];
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             temp[i][j] = 0;
             for (int k=0; k<4; k++) {
-                temp[i][j] ^= x[i][k] * y[k][j];
+                temp[i][j] ^= mix[i][k] * x[k][j];
             }
         }
     }
-    return temp;
-}
-
-unsigned char** mixColumns(unsigned char x[4][4]) {
-    return matrixMultiply(mix, x);
+    
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            x[i][j] = temp[i][j];
+        }
+    }
 }
 
 int main() {
