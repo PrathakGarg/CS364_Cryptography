@@ -29,6 +29,8 @@ unsigned char invmix[4][4] = {{165, 7, 26, 115},
                               {26, 115, 165, 7},
                               {7, 26, 115, 165}};
 
+unsigned int rcon[10] = {0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1b000000, 0x36000000};                           
+
 void subbytes(unsigned int pt[4][4]) {
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -82,9 +84,52 @@ void mixColumns(unsigned int pt[4][4]) {
     
 }
 
+unsigned int rotWord(unsigned int word) {
+    unsigned int rot;
+    for (int i = 0; i < 4; i++) 
+        rot |= (word >> (24 - 8 * i) & 0xff) << (8 * i);
 
+    return rot;
+}
+
+unsigned int subWord(unsigned int word) {
+    unsigned int subW;
+    for (int i = 0; i < 4; i++) {
+        int ii = word >> (24 - 8 * i) & 0xff >> 4;
+        int jj = word >> (24 - 8 * i) & 0xff & 0b1111;
+        subW |= sub[ii][jj] << (24 - 8 * i);
+    }
+
+    return subW;
+}
+
+void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11]) {
+    unsigned int words[44];
+
+    for (int i = 0; i < 4; i++) 
+        words[i] = key[i][0] << 24 | key[i][1] << 16 | key[i][2] << 8 | key[i][3];
+    
+    for (int i = 4; i < 44; i++) {
+        unsigned int temp = words[i - 1];
+        if (i % 4 == 0) 
+            temp = subWord(rotWord(temp)) ^ rcon[i / 4 - 1];
+
+        words[i] = words[i - 4] ^ temp;
+    }
+
+    for (int i = 0; i < 11; i++) {
+        unsigned int temp = words[i * 4];
+        for (int j = 0; j < 4; j++) 
+            temp = temp << 8 | words[i * 4 + j];
+        
+        roundKeys[i] = temp;
+    }
+}
 
 void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
+    unsigned int roundKeys[11];
+    roundKeyGen(key, roundKeys);
+
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             unsigned int msb = pt[i][j] >> 7;
