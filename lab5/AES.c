@@ -27,6 +27,11 @@ unsigned char mix[4][4] = {{2, 3, 1, 1},
                            {1, 1, 2, 3},
                            {3, 1, 1, 2}};
 
+unsigned char invmix[4][4] = {{14, 11, 13, 9},
+                              {9, 14, 11, 13},
+                              {13, 9, 14, 11},
+                              {11, 13, 9, 14}};
+
 unsigned char subbytes(unsigned char a) {
     int t1, t2;
     t1 = a & 15;
@@ -66,17 +71,51 @@ void invShiftRows(unsigned char x[4][4]) {
     }
 }
 
+char mult(char a, char b) {
+    char p = 0;
+    char counter;
+    char hi_bit_set;
+    for(counter = 0; counter < 8; counter++) {
+        if((b & 1) == 1) 
+            p ^= a;
+        hi_bit_set = (a & 0x80);
+        a <<= 1;
+        if(hi_bit_set == 0x80) 
+            a ^= 0x1b; 
+        b >>= 1;
+    }
+    return p;
+}
+
 void mixColumns(unsigned char x[4][4]) {
     unsigned char temp[4][4];
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             temp[i][j] = 0;
             for (int k=0; k<4; k++) {
-                temp[i][j] ^= mix[i][k] * x[k][j];
+                temp[i][j] ^= mult(mix[i][k], x[k][j]);
             }
         }
     }
-    
+
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            x[i][j] = temp[i][j];
+        }
+    }
+}
+
+void invMixColumns(unsigned char x[4][4]) {
+    unsigned char temp[4][4];
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            temp[i][j] = 0;
+            for (int k=0; k<4; k++) {
+                temp[i][j] ^= mult(invmix[i][k], x[k][j]);
+            }
+        }
+    }
+
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             x[i][j] = temp[i][j];
@@ -98,4 +137,17 @@ int main() {
         }
         printf("\n");
     }
+
+    printf("\n");
+
+    invMixColumns(test);
+
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            printf("%d ", test[i][j]);
+        }
+        printf("\n");
+    }
+
+    return 0;
 }

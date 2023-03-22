@@ -76,13 +76,13 @@ uint16_t decrypt(uint16_t ct, uint32_t key) {
     printf("XOR-ed %d: %hx\n\n", rounds, pt);
 
     pt = subBytes(pt, SINV);
-    printf("SubBytes %d: %hx\n\n", rounds-1, pt);
+    printf("SubBytes %d: %hx\n", rounds-1, pt);
     pt ^= roundKeys[rounds-2];
-    printf("XOR-ed %d: %hx\n", rounds-1, pt);
+    printf("XOR-ed %d: %hx\n\n", rounds-1, pt);
 
     for (int i = rounds-3; i >= 0; i--) {
         pt = permute(pt, PINV);
-        printf("Permuted %d: %hx\n", i+2, pt);
+        printf("Permuted %d: %hx\n", i+1, pt);
         pt = subBytes(pt, SINV);
         printf("SubBytes %d: %hx\n", i+1, pt);
         pt ^= roundKeys[i];
