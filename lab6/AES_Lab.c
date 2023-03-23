@@ -73,6 +73,7 @@ void subbytes(unsigned int pt[4][4]) {
     }
 }
 
+// Inverse of subbytes. Same as subbytes but use the inverse S-box.
 void invSubbytes(unsigned int pt[4][4]) {
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -83,6 +84,7 @@ void invSubbytes(unsigned int pt[4][4]) {
     }
 }
 
+// Shift the rows of the plaintext matrix by the row number. For example, the first row is not shifted, the second row is shifted by 1, the third row is shifted by 2 and the fourth row is shifted by 3.
 void shiftRows(unsigned int pt[4][4]) {
     unsigned int temp[4][4];
     for (int i = 0; i < 4; i++) {
@@ -98,6 +100,7 @@ void shiftRows(unsigned int pt[4][4]) {
     }
 }
 
+// Inverse of shiftRows. Same as shiftRows but shift the rows in the opposite direction.
 void invShiftRows(unsigned int pt[4][4]) {
     unsigned int temp[4][4];
     for (int i = 0; i < 4; i++) {
@@ -113,6 +116,7 @@ void invShiftRows(unsigned int pt[4][4]) {
     }
 }
 
+// Helper function to multiply two bytes in GF(2^8) using the irreducible polynomial x^8 + x^4 + x^3 + x + 1.
 unsigned char gmul(unsigned char a, unsigned char b) {
     unsigned char p = 0;
     unsigned char hi_bit_set;
@@ -126,17 +130,22 @@ unsigned char gmul(unsigned char a, unsigned char b) {
     return p;
 }
 
+// Multiply each column of the plaintext matrix with the MixColumns matrix. The result is the new plaintext matrix.
 void mixColumns(unsigned int pt[4][4]) {
     unsigned int temp[4][4];
+
+    // Copy the plaintext matrix to a temporary matrix
     for (int i = 0; i < 4; i++) 
         for (int j = 0; j < 4; j++) 
             temp[i][j] = pt[i][j];
 
+    // Multiply the temporary matrix with the MixColumns matrix
     for (int i = 0; i < 4; i++) 
         for (int j = 0; j < 4; j++)
             pt[i][j] = gmul(mix[i][0], temp[0][j]) ^ gmul(mix[i][1], temp[1][j]) ^ gmul(mix[i][2], temp[2][j]) ^ gmul(mix[i][3], temp[3][j]);
 }
 
+// Inverse of mixColumns. Same as mixColumns but multiply with the inverse MixColumns matrix.
 void invMixColumns(unsigned int pt[4][4]) {
     unsigned int temp[4][4];
     for (int i = 0; i < 4; i++) 
@@ -148,10 +157,12 @@ void invMixColumns(unsigned int pt[4][4]) {
             pt[i][j] = gmul(invmix[i][0], temp[0][j]) ^ gmul(invmix[i][1], temp[1][j]) ^ gmul(invmix[i][2], temp[2][j]) ^ gmul(invmix[i][3], temp[3][j]);
 }
 
+// Rotate the word by one byte to the left. For example, if the word is 0x12345678, the rotated word is 0x23456781.
 unsigned int rotWord(unsigned int word) {
     return (word << 8) | (word >> 24);
 }
 
+// Divide word into 4 bytes and substitute each byte using the S-box as before.
 unsigned int subWord(unsigned int word) {
     unsigned int subW = 0;
     for (int i = 0; i < 4; i++) {
@@ -163,12 +174,15 @@ unsigned int subWord(unsigned int word) {
     return subW;
 }
 
+// Generate the round keys from the original key.
 void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11][4]) {
     unsigned int words[44];
 
+    // For the first 4 words, copy the original key
     for (int i = 0; i < 4; i++) 
         words[i] = key[i][0] << 24 | key[i][1] << 16 | key[i][2] << 8 | key[i][3];
     
+    // For the rest of the words, generate the round keys using the previous words
     for (int i = 4; i < 44; i++) {
         unsigned int temp = words[i - 1];
         if (i % 4 == 0) 
@@ -177,25 +191,34 @@ void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11][4]) {
         words[i] = words[i - 4] ^ temp;
     }
 
+    // Copy the round keys to the roundKeys matrix combining 4 words into 1 key
     for (int i = 0; i < 11; i++) 
         for (int j = 0; j < 4; j++) 
             roundKeys[i][j] = words[i * 4 + j];
 }
 
+void addRoundKey(unsigned int pt[4][4], unsigned int key[4]) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            pt[i][j] ^= key[i] >> (24 - 8 * j) & 0xff;
+        }
+    }
+}
+
 void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
+    // Generate the round keys
     unsigned int roundKeys[11][4];
     roundKeyGen(key, roundKeys);
 
+    // For the first 9 rounds, add the round key, substitute bytes (After 2*x+1), shift rows, mix columns, and repeat.
     for (int k = 0; k < 9; k++) {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                pt[i][j] ^= roundKeys[k][i] >> (24 - 8 * j) & 0xff;
-            }
-        }
+        // Add the round key
+        addRoundKey(pt, roundKeys[k]);
 
         printf("Round %d: \n", k+1);
         printMatrix(pt);
 
+        // 2*x+1 before subbytes
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 unsigned int msb = pt[i][j] >> 7;
@@ -204,18 +227,21 @@ void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
             }
         }
 
+        // Subbytes as explained above
         printf("\n");
         subbytes(pt);
 
         printf("Subbytes: \n");
         printMatrix(pt);
 
+        // Shift rows as explained above
         printf("\n");
         shiftRows(pt);
 
         printf("ShiftRows: \n");
         printMatrix(pt);
 
+        // Mix columns as explained above
         printf("\n");
         mixColumns(pt);
 
@@ -225,15 +251,14 @@ void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
         printf("\n");
     }
 
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            pt[i][j] ^= roundKeys[9][i] >> (24 - 8 * j) & 0xff;
-        }
-    }
+    // For the last round, add the round key, substitute bytes (After 2*x+1), shift rows, and add the last round key. Do not mix columns.
+    // Add the round key
+    addRoundKey(pt, roundKeys[9]);
 
     printf("Round 10: \n");
     printMatrix(pt);
 
+    // 2*x+1 before subbytes
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             unsigned int msb = pt[i][j] >> 7;
@@ -242,51 +267,53 @@ void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
         }
     }
 
+    // Subbytes as explained above
     printf("\n");
     subbytes(pt);
 
     printf("Subbytes: \n");
     printMatrix(pt);
 
+    // Shift rows as explained above
     printf("\n");
     shiftRows(pt);
 
     printf("ShiftRows: \n");
     printMatrix(pt);
 
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            pt[i][j] ^= roundKeys[10][i] >> (24 - 8 * j) & 0xff;
-        }
-    }
+    // Add the last round key
+    addRoundKey(pt, roundKeys[10]);
     printf("\n");
 }
 
+// Decryption is the same as encryption except the order of the round keys is reversed and the mix columns step is omitted in the first decryption round.
 void AESDecrypt(unsigned int ct[4][4], unsigned int key[4][4]) {
+    // Generate the round keys
     unsigned int roundKeys[11][4];
     roundKeyGen(key, roundKeys);
 
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            ct[i][j] ^= roundKeys[10][i] >> (24 - 8 * j) & 0xff;
-        }
-    }
+    // For the first round of decryption, add the round key, inverse shift rows, inverse subbytes, (x-1)/2.
+    // Add the round key
+    addRoundKey(ct, roundKeys[10]);
 
     printf("Round 10: \n");
     printMatrix(ct);
 
+    // Inverse shift rows as explained above
     printf("\n");
     invShiftRows(ct);
 
     printf("InvShiftRows: \n");
     printMatrix(ct);
 
+    // Inverse subbytes as explained above
     printf("\n");
     invSubbytes(ct);
 
     printf("InvSubbytes: \n");
     printMatrix(ct);
 
+    // (x-1)/2 after inverse subbytes
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             unsigned int lsb = ct[i][j] & 1;
@@ -297,34 +324,36 @@ void AESDecrypt(unsigned int ct[4][4], unsigned int key[4][4]) {
         }
     }
 
+    // For the next 9 rounds of decryption, add the round key, inverse mix columns, inverse shift rows, inverse subbytes, (x-1)/2.
     for (int k = 9; k > 0; k--) {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                ct[i][j] ^= roundKeys[k][i] >> (24 - 8 * j) & 0xff;
-            }
-        }
+        // Add the round key
+        addRoundKey(ct, roundKeys[k]);
 
         printf("\nRound %d: \n", k);
         printMatrix(ct);
 
+        // Inverse mix columns as explained above
         printf("\n");
         invMixColumns(ct);
 
         printf("InvMixColumns: \n");
         printMatrix(ct);
 
+        // Inverse shift rows as explained above
         printf("\n");
         invShiftRows(ct);
 
         printf("InvShiftRows: \n");
         printMatrix(ct);
 
+        // Inverse subbytes as explained above
         printf("\n");
         invSubbytes(ct);
 
         printf("InvSubbytes: \n");
         printMatrix(ct);
 
+        // (x-1)/2 after inverse subbytes
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 unsigned int lsb = ct[i][j] & 1;
@@ -337,12 +366,8 @@ void AESDecrypt(unsigned int ct[4][4], unsigned int key[4][4]) {
     }
 
     printf("\n");
-
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            ct[i][j] ^= roundKeys[0][i] >> (24 - 8 * j) & 0xff;
-        }
-    }
+    // Finally, add the first round key.
+    addRoundKey(ct, roundKeys[0]);
 }
 
 void main() {
