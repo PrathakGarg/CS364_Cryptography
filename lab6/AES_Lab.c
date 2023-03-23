@@ -85,25 +85,21 @@ void mixColumns(unsigned int pt[4][4]) {
 }
 
 unsigned int rotWord(unsigned int word) {
-    unsigned int rot;
-    for (int i = 0; i < 4; i++) 
-        rot |= (word >> (24 - 8 * i) & 0xff) << (8 * i);
-
-    return rot;
+    return (word << 8) | (word >> 24);
 }
 
 unsigned int subWord(unsigned int word) {
-    unsigned int subW;
+    unsigned int subW = 0;
     for (int i = 0; i < 4; i++) {
-        int ii = word >> (24 - 8 * i) & 0xff >> 4;
-        int jj = word >> (24 - 8 * i) & 0xff & 0b1111;
+        int ii = (word >> (24 - 8 * i) & 0xff) >> 4;
+        int jj = (word >> (24 - 8 * i) & 0xff) & 0xf;
         subW |= sub[ii][jj] << (24 - 8 * i);
     }
 
     return subW;
 }
 
-void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11]) {
+void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11][4]) {
     unsigned int words[44];
 
     for (int i = 0; i < 4; i++) 
@@ -117,17 +113,13 @@ void roundKeyGen(unsigned int key[4][4], unsigned int roundKeys[11]) {
         words[i] = words[i - 4] ^ temp;
     }
 
-    for (int i = 0; i < 11; i++) {
-        unsigned int temp = words[i * 4];
+    for (int i = 0; i < 11; i++) 
         for (int j = 0; j < 4; j++) 
-            temp = temp << 8 | words[i * 4 + j];
-        
-        roundKeys[i] = temp;
-    }
+            roundKeys[i][j] = words[i * 4 + j];
 }
 
 void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
-    unsigned int roundKeys[11];
+    unsigned int roundKeys[11][4];
     roundKeyGen(key, roundKeys);
 
     for (int i = 0; i < 4; i++) {
