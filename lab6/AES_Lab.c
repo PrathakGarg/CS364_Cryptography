@@ -1,3 +1,7 @@
+// Prathak Garg
+// Roll No: 202051144
+// Date: 24/03/2023
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -380,7 +384,7 @@ void main() {
     printf("Enter the plaintext: ");
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            scanf("%x", &pt[i][j]);
+            scanf("%x", &pt[j][i]);
 
     printf("Enter the key: ");
     for (int i = 0; i < 4; i++) 
@@ -399,8 +403,10 @@ void main() {
 
     AESEncrypt(pt, key);
 
+    printf("====================================\n");
     printf("Encrypted: \n");
     printMatrix(pt);
+    printf("====================================\n");
 
     printf("\n");
 
