@@ -389,7 +389,7 @@ void main() {
     printf("Enter the key: ");
     for (int i = 0; i < 4; i++) 
         for (int j = 0; j < 4; j++)
-            scanf("%x", &key[i][j]);
+            scanf("%x", &key[j][i]);
 
     // Printing the original plaintext
     printf("\nPlaintext: \n");
