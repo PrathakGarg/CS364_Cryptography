@@ -124,10 +124,10 @@ void invMixColumns(unsigned char x[4][4]) {
 }
 
 int main() {
-    unsigned char test[4][4] = {{219, 19, 83, 69},
-                                {242, 10, 34, 92},
-                                {45, 38, 49, 76},
-                                {212, 212, 212, 213}};
+    unsigned char test[4][4] = {{123, 19, 83, 69},
+                                {202, 10, 34, 92},
+                                {87, 38, 49, 76},
+                                {77, 212, 212, 213}};
 
     mixColumns(test);
     

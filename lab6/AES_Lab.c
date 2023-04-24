@@ -214,6 +214,10 @@ void AESEncrypt(unsigned int pt[4][4], unsigned int key[4][4]) {
     unsigned int roundKeys[11][4];
     roundKeyGen(key, roundKeys);
 
+    for(int i=0;i<4;i++)
+        for(int j=0;j<4;j++)
+            printf("%x ",roundKeys[i][j]);
+
     // For the first 9 rounds, add the round key, substitute bytes (After 2*x+1), shift rows, mix columns, and repeat.
     for (int k = 0; k < 9; k++) {
         // Add the round key
