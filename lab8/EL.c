@@ -103,12 +103,12 @@ int main() {
     point alpha = generate_point();
     printf("alpha = (%d, %d)\n", alpha.x, alpha.y);
 
-    int a_pk, b_pk;
+    uint8_t a_pk, b_pk;
     printf("Enter private key of Alice (1-150): ");
-    scanf("%d", &a_pk);
+    scanf("%hhd", &a_pk);
     
     printf("Enter private key of Bob (1-150): ");
-    scanf("%d", &b_pk);
+    scanf("%hhd", &b_pk);
     
     point a_pk_p = multiply_point(alpha, a_pk);
     point b_pk_p = multiply_point(alpha, b_pk);
@@ -116,9 +116,11 @@ int main() {
     printf("Alice's public key = (%d, %d)\n", a_pk_p.x, a_pk_p.y);
     printf("Bob's public key = (%d, %d)\n", b_pk_p.x, b_pk_p.y);
 
-    point sk_p = multiply_point(alpha, a_pk * b_pk);
+    point a_sk_p = multiply_point(b_pk_p, a_pk);
+    point b_sk_p = multiply_point(a_pk_p, b_pk);
 
-    printf("Shared key = (%d, %d)\n", sk_p.x, sk_p.y);
+    printf("Alice's shared key = (%d, %d)\n", a_sk_p.x, a_sk_p.y);
+    printf("Bob's shared key = (%d, %d)\n", b_sk_p.x, b_sk_p.y);
 
     return 0;
 }
