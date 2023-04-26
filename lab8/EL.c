@@ -50,6 +50,27 @@ uint8_t sbox[256] = {
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 };
 
+uint8_t inv_sbox[256] = {
+    0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
+    0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
+    0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
+    0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25,
+    0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92,
+    0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84,
+    0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06,
+    0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b,
+    0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73,
+    0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e,
+    0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b,
+    0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4,
+    0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f,
+    0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef,
+    0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
+    0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
+};
+
+uint8_t rcon[15] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a};
+
 // Curve -> y^2 = x^3 + A*x + B
 
 typedef struct point {
@@ -156,16 +177,7 @@ uint32_t ch(uint32_t x, uint32_t y, uint32_t z) {
     return (x & y) ^ ((~x) & z);
 }
 
-void sha256(point sk, uint32_t hash[8]) {
-    uint8_t sk_x = (uint8_t) sk.x;
-    uint8_t sk_y = (uint8_t) sk.y;
-    
-    uint8_t input[64] = {0};
-    input[0] = sk_x;
-    input[1] = sk_y;
-    input[2] = 0x80;
-    input[63] = 0x10;
-
+void sha256(uint8_t input[64], uint32_t hash[8]) {
     uint32_t w[64] = {0};
     for (int i = 0; i < 16; i++) {
         w[i] = (input[4 * i] << 24) | (input[4 * i + 1] << 16) | (input[4 * i + 2] << 8) | (input[4 * i + 3]);
@@ -205,8 +217,20 @@ void sha256(point sk, uint32_t hash[8]) {
     hash[4] = e + H[4]; hash[5] = f + H[5]; hash[6] = g + H[6]; hash[7] = h + H[7];
 }
 
+void sha256_point(point sk, uint32_t hash[8]) {
+    uint8_t sk_x = (uint8_t) sk.x;
+    uint8_t sk_y = (uint8_t) sk.y;
+    
+    uint8_t input[64] = {0};
+    input[0] = sk_x;
+    input[1] = sk_y;
+    input[2] = 0x80;
+    input[63] = 0x10;
+
+    sha256(input, hash);
+}
+
 void aes256_key_expansion(uint8_t key[32], uint8_t key_schedule[15][16]) {
-    uint8_t rcon[15] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a};
     uint8_t temp[4];
 
     for (int i = 0; i < 8; i++) {
@@ -247,45 +271,299 @@ void aes256_key_expansion(uint8_t key[32], uint8_t key_schedule[15][16]) {
     }
 }
 
-void aes256_cbc_encrypt(uint8_t msg[32], uint8_t key[32], uint8_t iv[16], uint8_t cipher[32]) {
-    uint8_t key_schedule[15][16] = {0};
-    aes256_key_expansion(key, key_schedule);
-
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 16; j++) {
-            printf("%02x ", key_schedule[i][j]);
+void print_state(uint8_t state[16]) {
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            printf("%02x ", state[4 * i + j]);
         }
         printf("\n");
     }
     printf("\n");
-
-    // uint8_t block[16];
-    // for (int i = 0; i < 2; i++) {
-    //     for (int j = 0; j < 16; j++) {
-    //         block[j] = msg[16 * i + j] ^ iv[j];
-    //     }
-
-    //     aes256_encrypt(block, key_schedule, cipher + 16 * i);
-    //     for (int j = 0; j < 16; j++) {
-    //         iv[j] = cipher[16 * i + j];
-    //     }
-    // }
 }
 
+uint8_t gmul(uint8_t a, uint8_t b) {
+    uint8_t p = 0;
+    uint8_t hi_bit_set;
+    for (int i = 0; i < 8; i++) {
+        if ((b & 1) == 1) {
+            p ^= a;
+        }
+        hi_bit_set = (a & 0x80);
+        a <<= 1;
+        if (hi_bit_set == 0x80) {
+            a ^= 0x1b;
+        }
+        b >>= 1;
+    }
+    return p;
+}
+
+void aes256_add_round_key(uint8_t state[16], uint8_t key[16]) {
+    for (int i = 0; i < 16; i++) {
+        state[i] ^= key[i];
+    }
+}
+
+void aes256_sub_bytes(uint8_t state[16]) {
+    for (int i = 0; i < 16; i++) {
+        state[i] = sbox[state[i]];
+    }
+}
+
+void aes256_inv_sub_bytes(uint8_t state[16]) {
+    for (int i = 0; i < 16; i++) {
+        state[i] = inv_sbox[state[i]];
+    }
+}
+
+void aes256_shift_rows(uint8_t state[16]) {
+    uint8_t temp[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        temp[i] = state[i];
+    }
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            state[4 * i + j] = temp[4 * i + (j + i) % 4];
+        }
+    }
+}
+
+void aes256_inv_shift_rows(uint8_t state[16]) {
+    uint8_t temp[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        temp[i] = state[i];
+    }
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            state[4 * i + j] = temp[4 * i + (j + 4 - i) % 4];
+        }
+    }
+}
+
+void aes256_mix_columns(uint8_t state[16]) {
+    uint8_t temp[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        temp[i] = state[i];
+    }
+
+    for (int i = 0; i < 4; i++) {
+        state[i] = gmul(2, temp[i]) ^ gmul(3, temp[4 + i]) ^ temp[8 + i] ^ temp[12 + i];
+        state[4 + i] = temp[i] ^ gmul(2, temp[4 + i]) ^ gmul(3, temp[8 + i]) ^ temp[12 + i];
+        state[8 + i] = temp[i] ^ temp[4 + i] ^ gmul(2, temp[8 + i]) ^ gmul(3, temp[12 + i]);
+        state[12 + i] = gmul(3, temp[i]) ^ temp[4 + i] ^ temp[8 + i] ^ gmul(2, temp[12 + i]);
+    }
+}
+
+void aes256_inv_mix_columns(uint8_t state[16]) {
+    uint8_t temp[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        temp[i] = state[i];
+    }
+
+    for (int i = 0; i < 4; i++) {
+        state[i] = gmul(0x0e, temp[i]) ^ gmul(0x0b, temp[4 + i]) ^ gmul(0x0d, temp[8 + i]) ^ gmul(0x09, temp[12 + i]);
+        state[4 + i] = gmul(0x09, temp[i]) ^ gmul(0x0e, temp[4 + i]) ^ gmul(0x0b, temp[8 + i]) ^ gmul(0x0d, temp[12 + i]);
+        state[8 + i] = gmul(0x0d, temp[i]) ^ gmul(0x09, temp[4 + i]) ^ gmul(0x0e, temp[8 + i]) ^ gmul(0x0b, temp[12 + i]);
+        state[12 + i] = gmul(0x0b, temp[i]) ^ gmul(0x0d, temp[4 + i]) ^ gmul(0x09, temp[8 + i]) ^ gmul(0x0e, temp[12 + i]);
+    }
+}
+
+void aes256_encrypt(uint8_t pt[16], uint8_t key_schedule[15][16], uint8_t ct[16]) {
+    uint8_t state[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        state[i] = pt[i];
+    }
+
+    // print_state(state);
+
+    aes256_add_round_key(state, key_schedule[0]);
+    // print_state(state);
+    for (int i = 1; i < 14; i++) {
+        aes256_sub_bytes(state);
+        // printf("SubBytes: \n");
+        // print_state(state);
+        aes256_shift_rows(state);
+        // printf("ShiftRows: \n");
+        // print_state(state);
+        aes256_mix_columns(state);
+        // printf("MixColumns: \n");
+        // print_state(state);
+        aes256_add_round_key(state, key_schedule[i]);
+        // printf("AddRoundKey: \n");
+        // print_state(state);
+    }
+    aes256_sub_bytes(state);
+    // printf("SubBytes: \n");
+    // print_state(state);
+    aes256_shift_rows(state);
+    // printf("ShiftRows: \n");
+    // print_state(state);
+    aes256_add_round_key(state, key_schedule[14]);
+    // printf("AddRoundKey: \n");
+    // print_state(state);
+
+    // printf("-----------------------------------------------------------------------------\n\n\n");
+
+    for (int i = 0; i < 16; i++) {
+        ct[i] = state[i];
+    }
+}
+
+void aes256_decrypt(uint8_t ct[16], uint8_t key_schedule[15][16], uint8_t pt[16]) {
+    uint8_t state[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        state[i] = ct[i];
+    }
+
+    // print_state(state);
+
+    aes256_add_round_key(state, key_schedule[14]);
+    // printf("AddRoundKey: \n");
+    // print_state(state);
+    aes256_inv_shift_rows(state);
+    // printf("InvShiftRows: \n");
+    // print_state(state);
+    aes256_inv_sub_bytes(state);
+    // printf("InvSubBytes: \n");
+    // print_state(state);
+
+    for (int i = 13; i > 0; i--) {
+        aes256_add_round_key(state, key_schedule[i]);
+        // printf("AddRoundKey: \n");
+        // print_state(state);
+        aes256_inv_mix_columns(state);
+        // printf("InvMixColumns: \n");
+        // print_state(state);
+        aes256_inv_shift_rows(state);
+        // printf("InvShiftRows: \n");
+        // print_state(state);
+        aes256_inv_sub_bytes(state);
+        // printf("InvSubBytes: \n");
+        // print_state(state);
+    }
+
+    aes256_add_round_key(state, key_schedule[0]);
+    // printf("AddRoundKey: \n");
+    // print_state(state);
+
+    for (int i = 0; i < 16; i++) {
+        pt[i] = state[i];
+    }
+}
+
+void aes256_cbc_encrypt(uint8_t pt[32], uint8_t key[16], uint8_t iv[16], uint8_t ct[32]) {
+    uint8_t key_schedule[15][16] = {0};
+    aes256_key_expansion(key, key_schedule);
+
+    uint8_t state[16] = {0};
+    for (int i = 0; i < 16; i++) {
+        state[i] = pt[i] ^ iv[i];
+    }
+    
+    uint8_t state_ct[16] = {0};
+    aes256_encrypt(state, key_schedule, state_ct);
+
+    uint8_t temp[16];
+    aes256_decrypt(state_ct, key_schedule, temp);
+
+    for (int i = 0; i < 16; i++) {
+        ct[i] = state_ct[i];
+    }
+
+    for (int i = 0; i < 16; i++) {
+        state[i] = pt[16 + i] ^ state_ct[i];
+    }
+
+    aes256_encrypt(state, key_schedule, state_ct);
+
+    for (int i = 0; i < 16; i++) {
+        ct[16 + i] = state_ct[i];
+    }
+}
+
+void aes256_cbc_decrypt(uint8_t ct[32], uint8_t key[16], uint8_t iv[16], uint8_t pt[32]) {
+    uint8_t key_schedule[15][16] = {0};
+    aes256_key_expansion(key, key_schedule);
+
+    uint8_t state[16] = {0};
+    uint8_t state_pt[16] = {0};
+    uint8_t state_ct[16] = {0};
+
+    for (int i = 0; i < 16; i++) {
+        state_ct[i] = ct[i];
+    }
+
+    aes256_decrypt(state_ct, key_schedule, state_pt);
+
+    for (int i = 0; i < 16; i++) {
+        state[i] = state_pt[i] ^ iv[i];
+    }
+
+    for (int i = 0; i < 16; i++) {
+        pt[i] = state[i];
+    }
+
+    for (int i = 0; i < 16; i++) {
+        state_ct[i] = ct[16 + i];
+    }
+
+    aes256_decrypt(state_ct, key_schedule, state_pt);
+
+    for (int i = 0; i < 16; i++) {
+        pt[16 + i] = state_pt[i] ^ ct[i];
+    }
+}
+
+void generate_mac(uint32_t key[8], uint8_t msg[32], uint32_t mac[8]) {
+    uint32_t a[8] = {0};
+    for (int i = 0; i < 8; i++) {
+        a[i] = key[i];
+    }
+    a[7] ^= 0x00000001;
+
+    uint32_t b[8] = {0};
+    for (int i = 0; i < 8; i++) {
+        b[i] = key[i];
+    }
+    b[7] ^= 0x00000002;
+    
+    uint8_t c[64];
+    for (int i = 0; i < 32; i++) {
+        c[i] = b[i / 4] >> (8 * (3 - (i % 4))) & 0xFF;
+    }
+    for (int i = 0; i < 32; i++) {
+        c[32 + i] = msg[i];
+    }
+
+    uint32_t d[8];
+    sha256(c, d);
+
+    uint8_t e[64];
+    for (int i = 0; i < 32; i++) {
+        e[i] = a[i / 4] >> (8 * (3 - (i % 4))) & 0xFF;
+    }
+    for (int i = 0; i < 32; i++) {
+        e[32 + i] = d[i / 4] >> (8 * (3 - (i % 4))) & 0xFF;
+    }
+
+    sha256(e, mac);
+}
 
 int main() {
-    // point alpha = generate_point();
-    point alpha = {88, 26};
+    point alpha = generate_point();
+    // point alpha = {88, 26};
     printf("alpha = (%d, %d)\n", alpha.x, alpha.y);
 
     uint8_t a_pk, b_pk;
     printf("Enter private key of Alice (1-150): ");
-    // scanf("%hhd", &a_pk);
-    printf("45\n"); a_pk = 45;
+    scanf("%hhd", &a_pk);
+    // printf("45\n"); a_pk = 45;
     
     printf("Enter private key of Bob (1-150): ");
-    // scanf("%hhd", &b_pk);
-    printf("65\n"); b_pk = 65;
+    scanf("%hhd", &b_pk);
+    // printf("65\n"); b_pk = 65;
     
     point a_pk_p = multiply_point(alpha, a_pk);
     point b_pk_p = multiply_point(alpha, b_pk);
@@ -303,9 +581,9 @@ int main() {
     printf("\n");
 
     uint32_t a_hash[8];
-    sha256(a_sk_p, a_hash);
+    sha256_point(a_sk_p, a_hash);
     uint32_t b_hash[8];
-    sha256(b_sk_p, b_hash);
+    sha256_point(b_sk_p, b_hash);
 
     printf("Alice's hash = ");
     print_hex(a_hash);
@@ -317,18 +595,13 @@ int main() {
 
     uint8_t a_msg[32];
     printf("Enter Alice's message (32 bytes): ");
-    // for (int i = 0; i < 32; i++) {
-    //     scanf("%hhx", &a_msg[i]);
-    // }
-    for (int i = 0; i < 16; i++) {
-        a_msg[i] = 17*i;
-        a_msg[i + 16] = 17*i;
-    }
-
     for (int i = 0; i < 32; i++) {
-        printf("%02hhx", a_msg[i]);
+        scanf("%hhx", &a_msg[i]);
     }
-    printf("\n");
+    // for (int i = 0; i < 16; i++) {
+    //     a_msg[i] = 17*i;
+    //     a_msg[i + 16] = 17*i;
+    // }
 
     uint8_t a_cipher[32];
     uint8_t a_iv[16] = {0};
@@ -341,6 +614,50 @@ int main() {
     }
 
     aes256_cbc_encrypt(a_msg, a_key, a_iv, a_cipher);
+
+    printf("Alice's cipher (32 bytes) = ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02hhx ", a_cipher[i]);
+    }
+    printf("\n");
+
+    printf("\n");
+
+    uint32_t a_mac[8];
+    generate_mac(a_hash, a_msg, a_mac);
+
+    printf("Alice's MAC = ");
+    print_hex(a_mac);
+
+    printf("\n");
+
+    uint8_t b_msg[32];
+    uint8_t b_key[32];
+    for (int i = 0; i < 8; i++) {
+        b_key[4 * i] = b_hash[i] >> 24;
+        b_key[4 * i + 1] = b_hash[i] >> 16;
+        b_key[4 * i + 2] = b_hash[i] >> 8;
+        b_key[4 * i + 3] = b_hash[i];
+    }
+    uint8_t b_iv[16] = {0};
+    
+    aes256_cbc_decrypt(a_cipher, b_key, b_iv, b_msg);
+
+    printf("Bob Received message (32 bytes) = ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02hhx ", b_msg[i]);
+    }
+    printf("\n");
+
+    printf("\n");
+
+    uint32_t b_mac[8];
+    generate_mac(b_hash, b_msg, b_mac);
+
+    printf("Bob's MAC = "); 
+    print_hex(b_mac);
+
+    printf("\nSince the MACs are equal, the message is authentic.\n");
 
     return 0;
 }
